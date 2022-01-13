@@ -1,28 +1,51 @@
 import cv2
 import numpy as np
 
-def get_boxes(path):
+def crop_mrz_region(path):
+    img = cv2.imread(path)
+    mrz_region = get_mrz_region(img)
+    x,y,w,h = mrz_region
+    crop_img = img[y:y+h, x:x+w]
+    cv2.imshow("cropped", crop_img)
+    cv2.imwrite("cropped.jpg",crop_img)
+    cv2.waitKey(0)
+    
+
+def get_mrz_region(img):
     cv2.namedWindow("output", cv2.WINDOW_NORMAL)
     mser = cv2.MSER_create()
-    img = cv2.imread(path)
-    img = cv2.resize(img, (720, 720), interpolation = cv2.INTER_AREA)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    img_width = img.shape[0]
-    img_height = img.shape[1]
-
     vis = img.copy()
+    
+    vis = cv2.resize(vis, (720, 720), interpolation = cv2.INTER_AREA)
+    
+    scale_x = img.shape[1]/720
+    scale_y = img.shape[0]/720
+    
+    gray = cv2.cvtColor(vis, cv2.COLOR_BGR2GRAY)
+
+    img_width = vis.shape[1]
+    img_height = vis.shape[0]
+
+    
     regions, boundingBoxes  = mser.detectRegions(gray)
     boxes = filtered_boxes_by_size(boundingBoxes, img_width, img_height)
     remove_outer_boxes(boxes)
     boxes = merge_boxes_to_lines(boxes)
     mrz_region = last_two_lines_merged(boxes)
+    expand(15, mrz_region,img_width,img_height)
     x,y,w,h = mrz_region
     cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0), 1)
 
     cv2.imshow('output', vis)
     cv2.waitKey(0)
-    return boxes
+    revert_region(scale_x, scale_y, mrz_region)
+    return mrz_region
+    
+def revert_region(scale_x,scale_y,box):
+    box[0] = int(box[0] * scale_x)
+    box[1] = int(box[1] * scale_y)
+    box[2] = int(box[2] * scale_x)
+    box[3] = int(box[3] * scale_y)
 
 def last_two_lines_merged(boxes):
     boxes = sorted(boxes, key=lambda x:x[1])
@@ -30,6 +53,20 @@ def last_two_lines_merged(boxes):
         return merged_box(boxes[-2],boxes[-1])
     else:
         return boxes[0]
+        
+def expand(pixel, box, img_width, img_height):
+    x,y,w,h = box
+    maxX = x + w
+    maxY = y + h
+    new_x = max(0, x-pixel)
+    new_y = max(0, y-pixel)
+    new_maxX = min(img_width, maxX+pixel)
+    new_maxY = min(img_height, maxY+pixel)
+    box[0] = new_x
+    box[1] = new_y
+    box[2] = new_maxX - new_x
+    box[3] = new_maxY - new_y
+    
 
 
 def filtered_boxes_by_size(boundingBoxes, img_width, img_height):
@@ -166,4 +203,4 @@ def merged_box(box1, box2):
     return new_box
     
     
-get_boxes("dd49ec467f711f0eb4c0d60ea7acc6ac.jpg")
+crop_mrz_region("9e4e9ab49713b37ad055e460bfc1f434.jpg")
