@@ -16,13 +16,21 @@ def get_boxes(path):
     boxes = filtered_boxes_by_size(boundingBoxes, img_width, img_height)
     remove_outer_boxes(boxes)
     boxes = merge_boxes_to_lines(boxes)
-    for box in boxes:
-        x, y, w, h = box
-        cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0), 1)
+    mrz_region = last_two_lines_merged(boxes)
+    x,y,w,h = mrz_region
+    cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0), 1)
 
     cv2.imshow('output', vis)
     cv2.waitKey(0)
     return boxes
+
+def last_two_lines_merged(boxes):
+    boxes = sorted(boxes, key=lambda x:x[1])
+    if len(boxes)>=2:
+        return merged_box(boxes[-2],boxes[-1])
+    else:
+        return boxes[0]
+
 
 def filtered_boxes_by_size(boundingBoxes, img_width, img_height):
     filtered_boxes = []
@@ -158,4 +166,4 @@ def merged_box(box1, box2):
     return new_box
     
     
-get_boxes("1175418_231184000363788_534965287_n.png")
+get_boxes("dd49ec467f711f0eb4c0d60ea7acc6ac.jpg")
