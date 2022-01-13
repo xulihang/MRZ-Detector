@@ -71,6 +71,8 @@ def remove_outer_boxes(boxes):
             
        
 def merge_boxes_to_lines(boxes):
+    boxes = sorted(boxes, key=lambda x:x[1])
+    boxes = sorted(boxes, key=lambda x:x[0])
     new_boxes = []
     while len(boxes)>0:
         box = boxes[0]    
@@ -141,7 +143,7 @@ def boxes_in_one_line(a, b):
     max_y1 = a[1]+a[3]
     max_y2 = b[1]+b[3] 
     intersect_h = min(max_y1, max_y2) - y
-    if intersect_h>0:
+    if intersect_h>-10:
         return True
     else:
         return False
@@ -156,4 +158,4 @@ def merged_box(box1, box2):
     return new_box
     
     
-get_boxes("IMG_8763.jpg")
+get_boxes("1175418_231184000363788_534965287_n.png")
