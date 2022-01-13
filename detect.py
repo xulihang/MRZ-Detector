@@ -15,7 +15,7 @@ def get_boxes(path):
     regions, boundingBoxes  = mser.detectRegions(gray)
     boxes = filtered_boxes_by_size(boundingBoxes, img_width, img_height)
     remove_outer_boxes(boxes)
-
+    boxes = merge_boxes_to_lines(boxes)
     for box in boxes:
         x, y, w, h = box
         cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0), 1)
@@ -56,11 +56,7 @@ def remove_outer_boxes(boxes):
     boxes_index_to_remove=set()
     for i in range(len(boxes)):
         index = i
-        if i in boxes_index_to_remove:
-            continue
-        for j in range(len(boxes)):
-            if j in boxes_index_to_remove:
-                continue    
+        for j in range(len(boxes)):  
             box1 = boxes[i]
             box2 = boxes[j]
             if area_of_box(box1)<area_of_box(box2):
@@ -68,20 +64,96 @@ def remove_outer_boxes(boxes):
                 
             if intersection_area(box1,box2)>0:
                 boxes_index_to_remove.add(index) # remove larger boxes
-    list1 = list(set(boxes_index_to_remove))
+    list1 = list(boxes_index_to_remove)
     list1.sort(reverse=True) # remove from the end 
     for index in list1:
         boxes.pop(index)
             
-            
-
+       
 def merge_boxes_to_lines(boxes):
-    for box in boxes:
-        print(box)
+    new_boxes = []
+    while len(boxes)>0:
+        box = boxes[0]    
+        merged = merge_boxes_belong_to_one_line(box, boxes)
+        if merged == None:
+            boxes.remove(box)
+        else:
+            new_boxes.append(merged)
+    return new_boxes
+
+
+def merge_boxes_belong_to_one_line(box, boxes):
+    boxes_index_can_be_merged = set()
+    for i in range(len(boxes)): 
+        target_box = boxes[i]
+        if i == 0: #the box itself
+            continue
+        if boxes_in_one_line(box, target_box):
+            boxes_index_can_be_merged.add(i)
+    
+    if len(boxes_index_can_be_merged) == 0:
+        return None
+        
+    filtered_boxes = []
+    filtered_boxes.append(box)
+    for i in boxes_index_can_be_merged:
+        filtered_boxes.append(boxes[i])
+    
+    right_index = get_right_most_index(filtered_boxes)
+    right_most_box = filtered_boxes[right_index]
+    
+    left_index = get_left_most_index(filtered_boxes)
+    left_most_box = filtered_boxes[left_index]
+    
+    merged = merged_box(left_most_box, right_most_box)
+    
+    list1 = list(boxes_index_can_be_merged)
+    list1.sort(reverse=True) # remove from the end 
+    for i in list1:
+        boxes.pop(i)
+    
+    return merged
+    
+def get_left_most_index(boxes):
+    minX = boxes[0][0]
+    left_most_index = 0
+    for i in range(len(boxes)):
+        box = boxes[i]
+        box_left = box[0]
+        if box_left<minX:
+            minX = box_left
+            left_most_index = i
+    return left_most_index
+    
+def get_right_most_index(boxes):
+    maxX = 0
+    right_most_index = 0
+    for i in range(len(boxes)):
+        box = boxes[i]
+        box_right = box[0] + box[2]
+        if box_right>maxX:
+            maxX = box_right
+            right_most_index = i
+    return right_most_index
+
+def boxes_in_one_line(a, b):
+    y = max(a[1], b[1])
+    max_y1 = a[1]+a[3]
+    max_y2 = b[1]+b[3] 
+    intersect_h = min(max_y1, max_y2) - y
+    if intersect_h>0:
+        return True
+    else:
+        return False
     
     
 def merged_box(box1, box2):
-    print("")
+    minX = min(box1[0], box2[0])
+    maxX = max(box1[0]+box1[2], box2[0]+box2[2])
+    minY = min(box1[1], box2[1])
+    maxY = max(box1[1]+box1[3], box2[1]+box2[3])
+    new_box = [minX, minY, maxX-minX, maxY-minY]
+    return new_box
     
     
-get_boxes("1175418_231184000363788_534965287_n.png")
+get_boxes("IMG_8763.jpg")
