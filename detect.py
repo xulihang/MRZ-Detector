@@ -1,18 +1,22 @@
 import cv2
 import numpy as np
 
+show = False
+show_mrz = False
+
 def crop_mrz_region(path):
     img = cv2.imread(path)
     mrz_region = get_mrz_region(img)
     x,y,w,h = mrz_region
     crop_img = img[y:y+h, x:x+w]
-    cv2.imshow("cropped", crop_img)
-    cv2.imwrite("cropped.jpg",crop_img)
-    cv2.waitKey(0)
+    return crop_img
+    #cv2.imshow("cropped", crop_img)
+    #cv2.imwrite("cropped.jpg",crop_img)
+    #cv2.waitKey(0)
     
 
 def get_mrz_region(img):
-    cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+    
     mser = cv2.MSER_create()
     vis = img.copy()
     
@@ -31,13 +35,19 @@ def get_mrz_region(img):
     boxes = filtered_boxes_by_size(boundingBoxes, img_width, img_height)
     remove_outer_boxes(boxes)
     boxes = merge_boxes_to_lines(boxes)
-    mrz_region = last_two_lines_merged(boxes)
+    mrz_region = last_two_sibling_lines_merged(boxes)
     expand(15, mrz_region,img_width,img_height)
-    x,y,w,h = mrz_region
-    cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0), 1)
-
-    cv2.imshow('output', vis)
-    cv2.waitKey(0)
+    
+    if show:
+        cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+        if show_mrz:
+            boxes = [mrz_region]
+        for box in boxes:
+            x,y,w,h = box
+            cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0), 1)
+        cv2.imshow('output', vis)
+        cv2.waitKey(0)
+        
     revert_region(scale_x, scale_y, mrz_region)
     return mrz_region
     
@@ -47,12 +57,33 @@ def revert_region(scale_x,scale_y,box):
     box[2] = int(box[2] * scale_x)
     box[3] = int(box[3] * scale_y)
 
-def last_two_lines_merged(boxes):
+def last_two_sibling_lines_merged(boxes):
     boxes = sorted(boxes, key=lambda x:x[1])
     if len(boxes)>=2:
         return merged_box(boxes[-2],boxes[-1])
     else:
         return boxes[0]
+
+'''
+check if two boxes are next to each other
+a is above b
+'''  
+def is_sibling(a,b):
+    print("a-b")
+    print(a)
+    print(b)
+    y_a = a[1]
+    h_a = a[3]
+    y_b = b[1]
+    h_b = b[3]
+    max_y_with_growth = y_a + h_a + h_a
+    print(max_y_with_growth)
+    print(y_b)
+    if max_y_with_growth > y_b and y_b >= y_a + h_a:
+        return True
+    else:
+        return False
+    
         
 def expand(pixel, box, img_width, img_height):
     x,y,w,h = box
@@ -67,8 +98,6 @@ def expand(pixel, box, img_width, img_height):
     box[2] = new_maxX - new_x
     box[3] = new_maxY - new_y
     
-
-
 def filtered_boxes_by_size(boundingBoxes, img_width, img_height):
     filtered_boxes = []
     for box in boundingBoxes:
@@ -138,7 +167,7 @@ def merge_boxes_belong_to_one_line(box, boxes):
         if boxes_in_one_line(box, target_box):
             boxes_index_can_be_merged.add(i)
     
-    if len(boxes_index_can_be_merged) == 0:
+    if len(boxes_index_can_be_merged) < 10:
         return None
         
     filtered_boxes = []
@@ -203,4 +232,7 @@ def merged_box(box1, box2):
     return new_box
     
     
-crop_mrz_region("9e4e9ab49713b37ad055e460bfc1f434.jpg")
+if __name__ == "__main__":
+    show = True
+    show_mrz = True
+    crop_mrz_region("test.jpg")
