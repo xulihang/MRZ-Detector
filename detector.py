@@ -1,4 +1,5 @@
 import cv2
+import math
 import numpy as np
 
 show = False
@@ -145,16 +146,19 @@ def remove_outer_boxes(boxes):
             
        
 def merge_boxes_to_lines(boxes):
-    boxes = sorted(boxes, key=lambda x:x[1])
-    boxes = sorted(boxes, key=lambda x:x[0])
+    boxes = sorted(boxes, key=lambda x:(math.sqrt(x[0]**2+x[1]**2)))
+    #boxes = sorted(boxes, key=lambda x:x[1])
+    
     new_boxes = []
     while len(boxes)>0:
         box = boxes[0]    
         merged = merge_boxes_belong_to_one_line(box, boxes)
         if merged == None:
+            print("not merged")
             boxes.remove(box)
         else:
             new_boxes.append(merged)
+            boxes.remove(box)
     return new_boxes
 
 
@@ -235,4 +239,4 @@ def merged_box(box1, box2):
 if __name__ == "__main__":
     show = True
     show_mrz = True
-    crop_mrz_region("test.jpg")
+    crop_mrz_region("Moldova-passport-mini.jpg")
